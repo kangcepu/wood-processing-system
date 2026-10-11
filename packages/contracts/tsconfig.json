@@ -1,0 +1,10 @@
+{
+  "extends": "@wps/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "lib": ["ES2022"]
+  },
+  "include": ["src"]
+}

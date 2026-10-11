@@ -1,0 +1,35 @@
+import type { WorkOrderStatus } from "@wps/contracts";
+
+export const WORK_ORDER_STATUS_TRANSITIONS: Record<WorkOrderStatus, readonly WorkOrderStatus[]> = {
+  DRAFT: ["REVIEW", "CANCELLED"],
+  REVIEW: ["APPROVED", "DRAFT", "CANCELLED"],
+  APPROVED: ["RELEASED", "CANCELLED"],
+  RELEASED: ["HOLD", "SCHEDULED", "CANCELLED"],
+  SCHEDULED: ["HOLD", "IN_PRODUCTION", "CANCELLED"],
+  IN_PRODUCTION: ["HOLD", "FINAL_QC", "CANCELLED"],
+  FINAL_QC: ["HOLD", "READY_FOR_SHIPMENT", "CANCELLED"],
+  READY_FOR_SHIPMENT: ["HOLD", "SHIPPED"],
+  SHIPPED: ["COMPLETED"],
+  COMPLETED: ["CLOSED"],
+  CLOSED: [],
+  CANCELLED: [],
+  HOLD: ["RELEASED", "SCHEDULED", "IN_PRODUCTION", "FINAL_QC", "READY_FOR_SHIPMENT", "CANCELLED"],
+};
+
+export const WORK_ORDER_CANCELLABLE_STATUSES: readonly WorkOrderStatus[] = [
+  "DRAFT",
+  "REVIEW",
+  "APPROVED",
+  "RELEASED",
+  "SCHEDULED",
+  "IN_PRODUCTION",
+  "FINAL_QC",
+];
+
+export const WORK_ORDER_HOLDABLE_STATUSES: readonly WorkOrderStatus[] = [
+  "RELEASED",
+  "SCHEDULED",
+  "IN_PRODUCTION",
+  "FINAL_QC",
+  "READY_FOR_SHIPMENT",
+];

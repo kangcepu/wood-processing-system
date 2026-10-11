@@ -1,0 +1,765 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  SUPER_ADMIN
+  ADMIN
+  MANAGEMENT
+  SALES
+  PPIC
+  PROCUREMENT
+  RECEIVING_PBB
+  STOCK_CONTROLLER
+  PRODUCTION_OPERATOR
+  PRODUCTION_SUPERVISOR
+  QC
+  PACKING
+  SHIPPING
+  MAINTENANCE_VIEWER
+  AUDITOR
+}
+
+enum AccessArea {
+  HOME
+  SALES_ORDERS
+  WORK_ORDER
+  PLANNING
+  PROCUREMENT
+  RECEIVING_PBB
+  SAWMILL_ST
+  VACUUM_KD
+  PRODUCTION
+  QUALITY
+  STOCK_ALLOCATION
+  PACKING_SHIPPING
+  TRACEABILITY
+  NYANGKUT_REWORK
+  LEGACY_PRODUCTION_DUMMY
+  DASHBOARDS
+  REPORTS
+  SETTINGS
+}
+
+enum PermissionAction {
+  READ
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  EXPORT
+}
+
+enum SessionRevocationReason {
+  LOGOUT
+  LOGOUT_ALL
+  TOKEN_REUSE_DETECTED
+  ADMIN_REVOKED
+  EXPIRED
+}
+
+enum IntegrationSystem {
+  ERPNEXT
+  MCS
+  AIMS
+}
+
+enum IntegrationMode {
+  MOCK
+  REAL
+}
+
+enum StorageUrlMode {
+  PUBLIC
+  SIGNED
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+enum BuyerOrderStatus {
+  DRAFT
+  NEGOTIATION
+  PENDING_CONFIRMATION
+  CONFIRMED
+  REVISED
+  FULFILLED
+  CLOSED
+  CANCELLED
+}
+
+enum TemporarySpkStatus {
+  DRAFT
+  FEASIBILITY
+  REVIEW
+  WAITING_BUYER_CONFIRMATION
+  CONVERTED
+  CANCELLED
+}
+
+enum WorkOrderStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  RELEASED
+  SCHEDULED
+  IN_PRODUCTION
+  FINAL_QC
+  READY_FOR_SHIPMENT
+  SHIPPED
+  COMPLETED
+  CLOSED
+  HOLD
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProcessType {
+  SAWMILL
+  VACUUM_KD
+  S4S
+  FINGER_JOINT
+  MOULDING
+  ROTARY_LAMINATING
+  CROSS_CUT
+  SANDING
+  PACKING
+}
+
+enum LegacyAssignmentStatus {
+  UNASSIGNED
+  ASSIGNED
+}
+
+enum WorkOrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  timezone  String
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  deletedAt DateTime?
+
+  sites Site[]
+  users User[]
+
+  @@map("companies")
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  companyId String
+  code      String
+  name      String
+  timezone  String
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  deletedAt DateTime?
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  departments Department[]
+  shifts      Shift[]
+  users       User[]
+  settings    SiteSetting[]
+
+  @@unique([companyId, code])
+  @@map("sites")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  siteId    String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  deletedAt DateTime?
+
+  site  Site   @relation(fields: [siteId], references: [id])
+  users User[]
+
+  @@unique([siteId, code])
+  @@map("departments")
+}
+
+model Shift {
+  id        String   @id @default(uuid())
+  siteId    String
+  code      String
+  name      String
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  deletedAt DateTime?
+
+  site Site @relation(fields: [siteId], references: [id])
+
+  @@unique([siteId, code])
+  @@map("shifts")
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  username           String   @unique
+  email              String?  @unique
+  passwordHash       String
+  fullname           String
+  phone              String?
+  isEmployeeSourced  Boolean  @default(false)
+  employeeCode       String?  @unique
+  companyId          String?
+  siteId             String?
+  departmentId       String?
+  avatarUrl          String?
+  notificationPreferencesJson Json?
+  isActive           Boolean  @default(true)
+  mustChangePassword Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  createdBy          String?
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?
+  version            Int      @default(1)
+
+  company     Company?      @relation(fields: [companyId], references: [id])
+  site        Site?         @relation(fields: [siteId], references: [id])
+  department  Department?   @relation(fields: [departmentId], references: [id])
+  roles       UserRole[]
+  scopes      AccessScope[]
+  sessions    Session[]
+  attachments Attachment[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String    @id @default(uuid())
+  code        RoleCode  @unique
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id     String            @id @default(uuid())
+  area   AccessArea
+  action PermissionAction
+
+  roles RolePermission[]
+
+  @@unique([area, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model AccessScope {
+  id           String      @id @default(uuid())
+  userId       String
+  companyId    String?
+  siteId       String?
+  departmentId String?
+  area         AccessArea?
+  createdAt    DateTime    @default(now())
+  createdBy    String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("access_scopes")
+}
+
+model Session {
+  id                 String                   @id @default(uuid())
+  userId             String
+  refreshTokenHash   String                   @unique
+  tokenFamilyId      String
+  deviceLabel        String?
+  ipAddress          String?
+  userAgent          String?
+  createdAt          DateTime                 @default(now())
+  lastUsedAt         DateTime                 @default(now())
+  expiresAt          DateTime
+  rotatedAt          DateTime?
+  revokedAt          DateTime?
+  revokedReason       SessionRevocationReason?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tokenFamilyId])
+  @@map("sessions")
+}
+
+model SiteSetting {
+  id        String   @id @default(uuid())
+  siteId    String
+  key       String
+  valueJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  site Site @relation(fields: [siteId], references: [id])
+
+  @@unique([siteId, key])
+  @@map("site_settings")
+}
+
+model IntegrationSetting {
+  id        String            @id @default(uuid())
+  system    IntegrationSystem @unique
+  mode      IntegrationMode   @default(MOCK)
+  baseUrl   String?
+  isEnabled Boolean           @default(false)
+  configJson Json?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  updatedBy String?
+
+  @@map("integration_settings")
+}
+
+model StorageSetting {
+  id                   String         @id @default(uuid())
+  enabled              Boolean        @default(false)
+  endpoint             String
+  port                 Int
+  useSsl               Boolean        @default(true)
+  region               String?
+  accessKeyEncrypted   String
+  secretKeyEncrypted   String
+  defaultBucket        String
+  publicUrlMode        StorageUrlMode @default(SIGNED)
+  signedUrlExpirySeconds Int          @default(300)
+  maxFileSizeBytes     BigInt
+  allowedMimeTypes     String[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  updatedBy            String?
+  version              Int            @default(1)
+
+  @@map("storage_settings")
+}
+
+model Attachment {
+  id                 String    @id @default(uuid())
+  objectKey          String    @unique
+  originalFilename   String
+  mimeType           String
+  sizeBytes          BigInt
+  checksum           String
+  bucket             String
+  businessObjectType String
+  businessObjectId   String
+  classification     String?
+  retentionUntil     DateTime?
+  uploadedBy         String
+  uploadedAt         DateTime  @default(now())
+
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([businessObjectType, businessObjectId])
+  @@map("attachments")
+}
+
+model AuditEvent {
+  id              String    @id @default(uuid())
+  actorUserId     String?
+  impersonatedBy  String?
+  action          String
+  objectType      String
+  objectId        String?
+  beforeJson      Json?
+  afterJson       Json?
+  reason          String?
+  ipAddress       String?
+  userAgent       String?
+  correlationId   String?
+  createdAt       DateTime  @default(now())
+
+  @@index([objectType, objectId])
+  @@index([actorUserId])
+  @@map("audit_events")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  dataJson  Json?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  payloadJson   Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  createdAt     DateTime     @default(now())
+  publishedAt   DateTime?
+
+  @@index([status])
+  @@map("outbox_events")
+}
+
+model IdempotencyKey {
+  key          String   @id
+  endpoint     String
+  responseJson Json
+  createdAt    DateTime @default(now())
+
+  @@map("idempotency_keys")
+}
+
+model NumberSequence {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  prefix    String
+  padLength Int      @default(6)
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("number_sequences")
+}
+
+model CustomerReference {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  isActive  Boolean   @default(true)
+  syncedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  buyerOrders BuyerOrder[]
+
+  @@map("customer_references")
+}
+
+model ItemReference {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  name        String
+  uomCode     String
+  woodSpecies String?
+  itemGroup   String?
+  isActive    Boolean   @default(true)
+  syncedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  buyerOrderLines BuyerOrderLine[]
+  workOrders      WorkOrder[]
+  legacyProductionRecords LegacyProductionRecord[]
+
+  @@map("item_references")
+}
+
+model BuyerOrder {
+  id                String           @id @default(uuid())
+  orderNumber       String           @unique
+  buyerPoNumber     String
+  customerReferenceId String
+  contractReference String?
+  status            BuyerOrderStatus @default(DRAFT)
+  currentRevisionNo Int              @default(1)
+  destination       String
+  deliveryDate      DateTime
+  notes             String?
+  createdAt         DateTime         @default(now())
+  createdBy         String?
+  updatedAt         DateTime         @updatedAt
+  updatedBy         String?
+  version           Int              @default(1)
+
+  customer      CustomerReference            @relation(fields: [customerReferenceId], references: [id])
+  lines         BuyerOrderLine[]
+  revisions     CustomerRequirementRevision[]
+  temporarySpks TemporarySPK[]
+  workOrders    WorkOrder[]
+
+  @@map("buyer_orders")
+}
+
+model BuyerOrderLine {
+  id                   String   @id @default(uuid())
+  buyerOrderId         String
+  lineNo               Int
+  itemReferenceId      String
+  woodSpecies          String
+  dimension            String
+  grade                String
+  quantity             Decimal  @db.Decimal(18, 4)
+  uomCode              String
+  moistureRequirement  String?
+  packingRequirement   String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  version              Int      @default(1)
+
+  buyerOrder BuyerOrder    @relation(fields: [buyerOrderId], references: [id])
+  item       ItemReference @relation(fields: [itemReferenceId], references: [id])
+
+  @@unique([buyerOrderId, lineNo])
+  @@map("buyer_order_lines")
+}
+
+model CustomerRequirementRevision {
+  id                 String   @id @default(uuid())
+  buyerOrderId       String
+  revisionNo         Int
+  snapshotJson       Json
+  changeReason       String
+  impactAcknowledged Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  createdBy          String?
+
+  buyerOrder BuyerOrder @relation(fields: [buyerOrderId], references: [id])
+
+  @@unique([buyerOrderId, revisionNo])
+  @@map("customer_requirement_revisions")
+}
+
+model TemporarySPK {
+  id                    String             @id @default(uuid())
+  spkNumber             String             @unique
+  buyerOrderId          String
+  status                TemporarySpkStatus @default(DRAFT)
+  requirementRevisionNo Int
+  notes                 String?
+  convertedWorkOrderId  String?            @unique
+  createdAt             DateTime           @default(now())
+  createdBy             String?
+  updatedAt             DateTime           @updatedAt
+  updatedBy             String?
+  version               Int                @default(1)
+
+  buyerOrder        BuyerOrder            @relation(fields: [buyerOrderId], references: [id])
+  scenarios         FeasibilityScenario[]
+  convertedWorkOrder WorkOrder?           @relation("TemporarySpkConvertedWorkOrder", fields: [convertedWorkOrderId], references: [id])
+  workOrders        WorkOrder[]           @relation("WorkOrderTemporarySpk")
+
+  @@map("temporary_spks")
+}
+
+model FeasibilityScenario {
+  id             String   @id @default(uuid())
+  temporarySpkId String
+  scenarioNo     Int
+  name           String
+  assumptionsJson Json
+  resultJson     Json
+  isSelected     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  createdBy      String?
+
+  temporarySpk TemporarySPK @relation(fields: [temporarySpkId], references: [id])
+
+  @@unique([temporarySpkId, scenarioNo])
+  @@map("feasibility_scenarios")
+}
+
+model WorkOrder {
+  id                     String            @id @default(uuid())
+  workOrderNumber        String            @unique
+  buyerOrderId           String
+  temporarySpkId         String?
+  requirementRevisionNo  Int
+  itemReferenceId        String
+  quantity               Decimal           @db.Decimal(18, 4)
+  uomCode                String
+  dueDate                DateTime
+  destination            String
+  priority               WorkOrderPriority @default(NORMAL)
+  routingVersionLabel    String
+  selectedScenarioId     String?
+  status                 WorkOrderStatus   @default(DRAFT)
+  heldFromStatus          WorkOrderStatus?
+  blockingReason         String?
+  plannedQuantity        Decimal           @default(0) @db.Decimal(18, 4)
+  actualQuantity         Decimal           @default(0) @db.Decimal(18, 4)
+  goodQuantity            Decimal          @default(0) @db.Decimal(18, 4)
+  reworkQuantity          Decimal          @default(0) @db.Decimal(18, 4)
+  rejectQuantity          Decimal          @default(0) @db.Decimal(18, 4)
+  lossQuantity            Decimal          @default(0) @db.Decimal(18, 4)
+  packedQuantity           Decimal         @default(0) @db.Decimal(18, 4)
+  shippedQuantity          Decimal         @default(0) @db.Decimal(18, 4)
+  createdAt               DateTime        @default(now())
+  createdBy                String?
+  updatedAt                DateTime        @updatedAt
+  updatedBy                String?
+  version                  Int             @default(1)
+
+  buyerOrder          BuyerOrder            @relation(fields: [buyerOrderId], references: [id])
+  temporarySpk         TemporarySPK?         @relation("WorkOrderTemporarySpk", fields: [temporarySpkId], references: [id])
+  convertedFromSpk     TemporarySPK?         @relation("TemporarySpkConvertedWorkOrder")
+  item                 ItemReference         @relation(fields: [itemReferenceId], references: [id])
+  operations           WorkOrderOperation[]
+  legacyAssignments    LegacyProductionAssignment[]
+
+  @@map("work_orders")
+}
+
+model WorkOrderOperation {
+  id            String      @id @default(uuid())
+  workOrderId   String
+  sequenceNo    Int
+  processType   ProcessType
+  name          String
+  plannedStart  DateTime?
+  plannedFinish DateTime?
+  createdAt     DateTime    @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@unique([workOrderId, sequenceNo])
+  @@map("work_order_operations")
+}
+
+model Approval {
+  id          String         @id @default(uuid())
+  objectType  String
+  objectId    String
+  action      String
+  status      ApprovalStatus @default(PENDING)
+  requestedBy String
+  requestedAt DateTime       @default(now())
+  decidedBy   String?
+  decidedAt   DateTime?
+  reason      String?
+
+  @@index([objectType, objectId])
+  @@map("approvals")
+}
+
+model LegacyProductionRecord {
+  id                   String                 @id @default(uuid())
+  legacyReferenceNumber String                @unique
+  processType          ProcessType
+  itemReferenceId      String
+  woodSpecies          String
+  dimensions           String
+  grade                String
+  specificationText    String?
+  plannedQuantity      Decimal                @db.Decimal(18, 4)
+  inputQuantity        Decimal                @db.Decimal(18, 4)
+  outputQuantity       Decimal                @db.Decimal(18, 4)
+  goodQuantity         Decimal                @db.Decimal(18, 4)
+  reworkQuantity       Decimal                @default(0) @db.Decimal(18, 4)
+  rejectQuantity       Decimal                @default(0) @db.Decimal(18, 4)
+  lossQuantity         Decimal                @default(0) @db.Decimal(18, 4)
+  uomCode              String
+  legacyProductionDate DateTime
+  machineDisplay       String
+  operatorDisplay      String
+  originalStatus       String
+  source               String                 @default("LEGACY_DUMMY")
+  createdEnvironment   String
+  seedBatch            String
+  originalPayloadJson  Json
+  assignmentStatus     LegacyAssignmentStatus @default(UNASSIGNED)
+  currentAssignmentId  String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  version              Int                    @default(1)
+
+  item        ItemReference                @relation(fields: [itemReferenceId], references: [id])
+  assignments LegacyProductionAssignment[]  @relation("LegacyProductionRecordAssignments")
+
+  @@map("legacy_production_records")
+}
+
+model LegacyProductionAssignment {
+  id                      String    @id @default(uuid())
+  legacyProductionRecordId String
+  workOrderId             String
+  assignedQuantity        Decimal   @db.Decimal(18, 4)
+  compatibilityResultJson Json
+  overrideReason          String?
+  assignedBy              String
+  assignedAt              DateTime  @default(now())
+  unassignedBy            String?
+  unassignedReason        String?
+  unassignedAt            DateTime?
+  auditEventId            String?
+  version                 Int       @default(1)
+
+  record    LegacyProductionRecord @relation("LegacyProductionRecordAssignments", fields: [legacyProductionRecordId], references: [id])
+  workOrder WorkOrder              @relation(fields: [workOrderId], references: [id])
+
+  @@index([legacyProductionRecordId])
+  @@index([workOrderId])
+  @@map("legacy_production_assignments")
+}

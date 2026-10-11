@@ -1,0 +1,17 @@
+import type { TemporarySpkAction, TemporarySpkStatus } from "@wps/contracts";
+
+export const TEMPORARY_SPK_STATUS_TRANSITIONS: Record<TemporarySpkStatus, readonly TemporarySpkStatus[]> = {
+  DRAFT: ["FEASIBILITY", "CANCELLED"],
+  FEASIBILITY: ["REVIEW", "CANCELLED"],
+  REVIEW: ["WAITING_BUYER_CONFIRMATION", "CANCELLED"],
+  WAITING_BUYER_CONFIRMATION: ["CONVERTED", "CANCELLED"],
+  CONVERTED: [],
+  CANCELLED: [],
+};
+
+export const TEMPORARY_SPK_ACTION_TARGET: Record<TemporarySpkAction, TemporarySpkStatus> = {
+  START_FEASIBILITY: "FEASIBILITY",
+  SUBMIT_FOR_REVIEW: "REVIEW",
+  REQUEST_BUYER_CONFIRMATION: "WAITING_BUYER_CONFIRMATION",
+  CANCEL: "CANCELLED",
+};

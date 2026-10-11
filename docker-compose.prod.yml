@@ -1,0 +1,24 @@
+services:
+  postgres:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+    profiles: ["redis"]
+
+  backend:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  frontend:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m

@@ -1,0 +1,11 @@
+{
+  "extends": "@wps/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "lib": ["dom", "dom.iterable", "ES2022"]
+  },
+  "include": ["src"]
+}

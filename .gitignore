@@ -1,0 +1,43 @@
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+
+# Build and framework output
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Local environment and secrets (keep the safe template)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime data and logs
+.devdata/
+*.log
+*.pid
+backend/prisma/*.sqlite
+backend/prisma/*.sqlite-journal
+
+# Product requirements and internal Markdown documentation
+PRD
+PRD.*
+*.md
+!README.md
+
+# Editors and operating systems
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

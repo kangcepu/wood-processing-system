@@ -1,0 +1,10 @@
+{
+  "name": "@wps/typescript-config",
+  "private": true,
+  "version": "1.0.0",
+  "files": [
+    "base.json",
+    "nestjs.json",
+    "nextjs.json"
+  ]
+}
