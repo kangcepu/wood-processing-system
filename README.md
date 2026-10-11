@@ -50,6 +50,3 @@ pnpm test:e2e      # end-to-end test
 - `packages/typescript-config/` — konfigurasi TypeScript bersama
 - `infra/` — script operasional
 
-File environment lokal, output build, cache, log, PRD, dan dokumentasi Markdown
-internal dikecualikan dari Git. Hanya file bernama `README.md` yang boleh terlacak
-dari kelompok file Markdown.
